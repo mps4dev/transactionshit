@@ -32,8 +32,8 @@ public class TransactionController {
         return service.doTransaction(new TransactionDto(account.accountNumber(), account.amount(), account.ownerId(), TransactionType.WITHDRAW));
     }
 
-    @GetMapping("/top")
-    public List<OwnerDto> topN(@PathParam("size") int size) {
-        return service.topOwners(size);
+    @GetMapping("/owners")
+    public List<OwnerDto> topOwners(@PathParam("size") int limit) {
+        return service.topOwners(limit);
     }
 }

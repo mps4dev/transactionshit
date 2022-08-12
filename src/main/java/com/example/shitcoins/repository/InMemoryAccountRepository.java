@@ -6,10 +6,10 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Objects.isNull;
@@ -17,7 +17,7 @@ import static java.util.Objects.isNull;
 @Repository
 public class InMemoryAccountRepository implements AccountRepository {
 
-    private final Map<Integer, Account> accounts = new ConcurrentHashMap<>();
+    private final Map<Integer, Account> accounts = new HashMap<>();
     private final AtomicInteger lastId = new AtomicInteger(1);
 
     @Override
@@ -42,22 +42,22 @@ public class InMemoryAccountRepository implements AccountRepository {
         return accountToBeLocked;
     }
 
-    private int getNextId() {
-        return lastId.getAndIncrement();
-    }
-
     @Override
     public Optional<Account> findByAccountNumber(String accountNumber) {
         return accounts.values().stream().filter(account -> account.getNumber().equals(accountNumber)).findFirst();
     }
 
     @Override
-    public List<Account> findTop(int n) {
+    public List<Account> findTop(int limit) {
         return accounts.values()
                 .stream()
                 .sorted(Comparator.comparing(Account::getBalance).reversed())
-                .limit(n)
+                .limit(limit)
                 .toList();
+    }
+
+    private int getNextId() {
+        return lastId.getAndIncrement();
     }
 
 }

@@ -14,6 +14,6 @@ public interface AccountRepository {
 
     Optional<Account> findByAccountNumber(String accountNumber);
 
-    List<Account> findTop(int n);
+    List<Account> findTop(int limit);
 
 }

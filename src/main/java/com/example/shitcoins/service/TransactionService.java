@@ -34,11 +34,11 @@ public class TransactionService {
                 .orElseGet(() -> createNewAccount(transaction));
     }
 
-    public List<OwnerDto> topOwners(int size) {
-        if (size < 0) {
-            throw new IllegalArgumentException("Size cannot be less than zero");
+    public List<OwnerDto> topOwners(int limit) {
+        if (limit < 0) {
+            throw new IllegalArgumentException("Limit cannot be less than zero");
         }
-        return repository.findTop(size)
+        return repository.findTop(limit)
                 .stream()
                 .map(Account::getOwnerId)
                 .map(OwnerDto::new)
