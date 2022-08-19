@@ -2,22 +2,17 @@ package com.example.shitcoins.service;
 
 import com.example.shitcoins.domain.Account;
 import com.example.shitcoins.dto.OwnerDto;
-import com.example.shitcoins.dto.AccountDto;
 import com.example.shitcoins.dto.TransactionDto;
-import com.example.shitcoins.error.NotEnoughFundsException;
 import com.example.shitcoins.error.TransactionException;
-import com.example.shitcoins.mapper.AccountMapper;
 import com.example.shitcoins.repository.AccountRepository;
-import com.example.shitcoins.validator.TransactionValidator;
+import com.example.shitcoins.transaction.TransactionLocks;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
-
-import static com.example.shitcoins.domain.TransactionType.DEPOSIT;
+import java.util.function.BiFunction;
 
 @Service
 @RequiredArgsConstructor
@@ -25,13 +20,13 @@ import static com.example.shitcoins.domain.TransactionType.DEPOSIT;
 public class TransactionService {
 
     private final AccountRepository repository;
-    private final AccountMapper accountMapper;
 
-    public AccountDto doTransaction(TransactionDto transaction) {
-        TransactionValidator.validateTransaction(transaction);
-        return repository.findByAccountNumber(transaction.accountNumber())
-                .map(account -> updateAccount(transaction, account))
-                .orElseGet(() -> createNewAccount(transaction));
+    public Account deposit(TransactionDto transaction) {
+       return TransactionLocks.doInLock(transaction.accountNumber(), () -> depositInternal(transaction));
+    }
+
+    public Account withdraw(TransactionDto transaction) {
+        return TransactionLocks.doInLock(transaction.accountNumber(), () -> withdrawInternal(transaction));
     }
 
     public List<OwnerDto> topOwners(int limit) {
@@ -45,24 +40,28 @@ public class TransactionService {
                 .toList();
     }
 
-    private synchronized AccountDto createNewAccount(TransactionDto transaction) {
-        TransactionValidator.validateTransactionDataToCreate(transaction);
-        Optional<Account> maybeAccount = repository.findByAccountNumber(transaction.accountNumber());
-        if (maybeAccount.isPresent()) {
-            throw new TransactionException(String.format("Account with number %s already exists", transaction.accountNumber()));
-        } else {
-            Account newAccount = new Account(transaction.accountNumber(), transaction.amount(), transaction.ownerId());
-            newAccount = repository.save(newAccount);
-            return accountMapper.map(newAccount);
-        }
+    private Account depositInternal(TransactionDto transaction) {
+        return repository.findByAccountNumber(transaction.accountNumber())
+                .map(account -> updateAccount(account, transaction, Account::add))
+                .orElseGet(() -> createNewAccount(transaction));
     }
 
-    private AccountDto updateAccount(TransactionDto transaction, Account account) {
-        if (account.getBalance().compareTo(transaction.amount()) < 0) {
-            throw new NotEnoughFundsException(transaction);
+    private Account withdrawInternal(TransactionDto transaction) {
+        return repository.findByAccountNumber(transaction.accountNumber())
+                .map(account -> updateAccount(account, transaction, Account::subtract))
+                .orElseThrow(() -> new TransactionException("Cannot create account with a debt"));
+    }
+
+    private synchronized Account updateAccount(Account account, TransactionDto transaction, BiFunction<Account, BigDecimal, Account> updater) {
+        return repository.save(updater.apply(account, transaction.amount()));
+    }
+
+    private Account createNewAccount(TransactionDto transaction) {
+        if (transaction.ownerId() == null) {
+            throw new TransactionException("No owner provided");
         }
-        BigDecimal amountToChange = transaction.type() == DEPOSIT ? transaction.amount() : transaction.amount().negate();
-        Account updatedAccount = repository.update(account.getId(), amountToChange);
-        return accountMapper.map(updatedAccount);
+        return repository.findByAccountNumber(transaction.accountNumber())
+                .map(account -> repository.save(account.add(transaction.amount())))
+                .orElseGet(() -> repository.save(new Account(transaction.accountNumber(), transaction.amount(), transaction.ownerId())));
     }
 }

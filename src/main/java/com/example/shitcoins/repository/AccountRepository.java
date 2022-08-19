@@ -10,8 +10,6 @@ public interface AccountRepository {
 
     Account save(Account account);
 
-    Account update(int accountId, BigDecimal amount);
-
     Optional<Account> findByAccountNumber(String accountNumber);
 
     List<Account> findTop(int limit);

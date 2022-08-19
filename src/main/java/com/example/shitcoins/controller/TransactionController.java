@@ -1,8 +1,7 @@
 package com.example.shitcoins.controller;
 
-import com.example.shitcoins.dto.OwnerDto;
-import com.example.shitcoins.domain.TransactionType;
 import com.example.shitcoins.dto.AccountDto;
+import com.example.shitcoins.dto.OwnerDto;
 import com.example.shitcoins.dto.TransactionDto;
 import com.example.shitcoins.service.TransactionService;
 import lombok.RequiredArgsConstructor;
@@ -16,20 +15,20 @@ import javax.websocket.server.PathParam;
 import java.util.List;
 
 @RestController
-@RequestMapping("/account")
+@RequestMapping("/api/v1/account")
 @RequiredArgsConstructor
 public class TransactionController {
 
     private final TransactionService service;
 
     @PutMapping("/deposit")
-    public AccountDto deposit(@RequestBody AccountDto account) {
-        return service.doTransaction(new TransactionDto(account.accountNumber(), account.amount(), account.ownerId(), TransactionType.DEPOSIT));
+    public AccountDto deposit(@RequestBody TransactionDto transaction) {
+        return service.deposit(transaction).toDto();
     }
 
     @PutMapping("/withdrawal")
-    public AccountDto withdraw(@RequestBody AccountDto account) {
-        return service.doTransaction(new TransactionDto(account.accountNumber(), account.amount(), account.ownerId(), TransactionType.WITHDRAW));
+    public AccountDto withdraw(@RequestBody TransactionDto transaction) {
+        return service.withdraw(transaction).toDto();
     }
 
     @GetMapping("/owners")
