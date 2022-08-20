@@ -22,11 +22,17 @@ public class TransactionService {
     private final AccountRepository repository;
 
     public Account deposit(TransactionDto transaction) {
-       return TransactionLocks.doInLock(transaction.accountNumber(), () -> depositInternal(transaction));
+        TransactionLocks.lockAccount(transaction.accountNumber());
+        Account account = depositInternal(transaction);
+        TransactionLocks.unlockAccount(transaction.accountNumber());
+        return account;
     }
 
     public Account withdraw(TransactionDto transaction) {
-        return TransactionLocks.doInLock(transaction.accountNumber(), () -> withdrawInternal(transaction));
+        TransactionLocks.lockAccount(transaction.accountNumber());
+        Account account = withdrawInternal(transaction);
+        TransactionLocks.unlockAccount(transaction.accountNumber());
+        return account;
     }
 
     public List<OwnerDto> topOwners(int limit) {
